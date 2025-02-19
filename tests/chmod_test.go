@@ -1,11 +1,13 @@
 package tests
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -180,15 +182,9 @@ func TestChangeSymLinkPerm(t *testing.T) {
 	createTempFile(t, tempFile)
 	err := os.Symlink(tempFile, symLinkFile)
 
-	in, _ := os.Stat(tempFile)
-	fmt.Println(in.Mode().Perm())
-
 	assert.NoError(t, err, "Error creating symbolic link")
 
 	err = runChmodCmd("777", symLinkFile)
-	in, _ = os.Stat(tempFile)
-
-	fmt.Println(in.Mode().Perm())
 
 	assert.NoError(t, err, "Error change permissions with help symbolic link")
 
@@ -196,5 +192,129 @@ func TestChangeSymLinkPerm(t *testing.T) {
 	assert.NoError(t, err, "Error getting file information")
 
 	assert.Equal(t, os.FileMode(0777), info.Mode().Perm(), "Permissions don`t match 777")
+}
+
+// Протестировать возомжно назначениярава через u-x
+func TestChangePermWithSymAddXForUser(t *testing.T) {
+	tempFile := "changePermWithSymAddXForUser.txt"
+	defer os.Remove(tempFile)
+
+	createTempFile(t, tempFile)
+
+	err := runChmodCmd("u+x", tempFile)
+
+	assert.NoError(t, err, "Error change permissions with help symbolic notation")
+
+	info, err := os.Stat(tempFile)
+
+	assert.NoError(t, err, "Error getting file information")
+
+	assert.Equal(t, os.FileMode(0744), info.Mode().Perm(), "File permissions don`t match expected 0744")
+}
+
+// Протестировать возомжно отобрать права через o+w
+func TestChangePermWithSymAddRForOther(t *testing.T) {
+	tempFile := "ChangePermWithSymAddRForOther.txt"
+	defer os.Remove(tempFile)
+
+	createTempFile(t, tempFile)
+
+	err := runChmodCmd("o-r", tempFile)
+
+	assert.NoError(t, err, "Error change permissions with help symbolic notation")
+
+	info, err := os.Stat(tempFile)
+
+	assert.NoError(t, err, "Error getting file information")
+	assert.Equal(t, os.FileMode(0640), info.Mode().Perm(), "File permissions don`t match expected 744")
 
 }
+
+// Протестировать это
+// chmod -v 755 t.txt
+// mode of 't.txt' changed from 0640 (rw-r-----) to 0755 (rwxr-xr-x)
+func TestChmodVPerm(t *testing.T) {
+	tempFile := "ChmodVPermFile.txt"
+	defer os.Remove(tempFile)
+
+	createTempFile(t, tempFile)
+
+	cmd := exec.Command("chmod", "-v", "u=r,g=rx,o=rw", tempFile) //456
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err := cmd.Run()
+
+	assert.NoError(t, err, "Error exec chmod")
+
+	expOutput := fmt.Sprintf("mode of '%s' changed from 0644 (rw-r--r--) to 0456 (r--r-xrw-)", tempFile)
+	cmdOutput := strings.TrimSpace(out.String())
+
+	assert.Equal(t, expOutput, cmdOutput, "Output of the chmod doesn`t match what is expected")
+
+	// вывод у cmd будет  mode of 'ChmodVPermFile.txt' changed from 0644 (rw-r--r--) to 0456 (r--r-xrw-) и я хчоу убедиться что дейсвтительно такой вывод
+
+}
+
+// Протестировать это chmod go-r директория — удалить права на чтение для группы и остальных пользователей для каталога
+// удаление права у юзера и группы на чтенеие
+func TestChmodRemoveUserGroupR(t *testing.T) {
+	tempFile := "chmodRemoveUserGroupRFile.txt"
+	defer os.Remove(tempFile)
+
+	createTempFile(t, tempFile)
+
+	err := runChmodCmd("ug-r", tempFile)
+
+	assert.NoError(t, err, "Error change permissions")
+
+	info, err := os.Stat(tempFile)
+
+	assert.NoError(t, err, "Error getting file information")
+
+	assert.Equal(t, os.FileMode(0204), info.Mode().Perm(), "File permissions don`t match expected 204")
+
+}
+
+// Протестировать это chmod -R u+rwx,go-rwx каталог — добавит владельцу права на чтение, запись и выполнение, а группе и остальным пользователям уберет все права для всех файлов и каталогов в указанной директории и её подкаталогах.
+func TestChmodAddandRemovePermUserGroupOther(t *testing.T) {
+	// t.Skip()
+	baseDir := "folder1"
+	err := os.Mkdir(baseDir, 0755)
+
+	assert.NoError(t, err, "Error creating directory")
+
+	defer os.RemoveAll(baseDir)
+
+	generateDirectoriesAndFiles(baseDir)
+
+	cmd := exec.Command("chmod", "-R", "go-wrx,go+w", baseDir)
+	err = cmd.Run()
+
+	assert.NoError(t, err, "Error changing permissions recursively")
+
+	err = filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
+		assert.NoError(t, err, "Error walking through path")
+
+		if info.IsDir() {
+			assert.Equal(t, os.FileMode(0722), info.Mode().Perm(), "Permissions do not match 0711 for path: "+path)
+		} else {
+			assert.Equal(t, os.FileMode(0622), info.Mode().Perm(), "Permissions do not match 0700 for path: "+path)
+		}
+
+		return nil
+	})
+
+	assert.NoError(t, err, "Error during filepath.Walk")
+
+}
+
+// Протестировать Ключ —reference и его использование
+func TestChmodReferenceOpt(t *testing.T) {
+
+}
+
+//Протестировать что chmod a +/-/= право file, действительно происходит смена у всех
+
+//Протестировать такую штуку chmod o-r,a-w month.txt text.txt
