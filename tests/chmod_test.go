@@ -130,7 +130,7 @@ func TestSetWrongPerm(t *testing.T) {
 	assert.NoError(t, err, "Error creating file")
 	file.Close()
 
-	cmd := exec.Command("chmod", "997", tempFile)
+	cmd := exec.Command("chmod", "997", tempFile) // Заменить на функцию runChmodCmd()
 
 	err = cmd.Run()
 	assert.Error(t, err, "Expected error when trying to set wrong permissions")
@@ -167,4 +167,34 @@ func TestChangePermRecurs(t *testing.T) {
 	})
 
 	assert.NoError(t, err, "Error during filepath.Walk")
+}
+
+// Проверка на то, что смена прав у файла который является символьной ссылкой, меняет права файла на который ссылается ссылка
+func TestChangeSymLinkPerm(t *testing.T) {
+	tempFile := "ChangeSymLinkPermFile.txt"
+	symLinkFile := "testSymLinlk.txt"
+
+	defer os.Remove(tempFile)
+	defer os.Remove(symLinkFile)
+
+	createTempFile(t, tempFile)
+	err := os.Symlink(tempFile, symLinkFile)
+
+	in, _ := os.Stat(tempFile)
+	fmt.Println(in.Mode().Perm())
+
+	assert.NoError(t, err, "Error creating symbolic link")
+
+	err = runChmodCmd("777", symLinkFile)
+	in, _ = os.Stat(tempFile)
+
+	fmt.Println(in.Mode().Perm())
+
+	assert.NoError(t, err, "Error change permissions with help symbolic link")
+
+	info, err := os.Stat(tempFile)
+	assert.NoError(t, err, "Error getting file information")
+
+	assert.Equal(t, os.FileMode(0777), info.Mode().Perm(), "Permissions don`t match 777")
+
 }
