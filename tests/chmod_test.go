@@ -312,9 +312,54 @@ func TestChmodAddandRemovePermUserGroupOther(t *testing.T) {
 
 // Протестировать Ключ —reference и его использование
 func TestChmodReferenceOpt(t *testing.T) {
+	tempFile := "sourceFile.txt"  //откуда
+	tempFile1 := "assignPerm.txt" //куда переделать на нормальные названия
+
+	defer os.Remove(tempFile)
+	defer os.Remove(tempFile1)
+
+	createTempFile(t, tempFile)
+	createTempFile(t, tempFile1)
+
+	err := runChmodCmd("400", tempFile) // меняем права у файла от которого будем копировать права к другому файлу
+
+	assert.NoError(t, err, "Error change permissions")
+
+	//Проверяем что права успешно изменились
+	info, err := os.Stat(tempFile)
+
+	assert.NoError(t, err, "Error getting file information")
+
+	assert.Equal(t, os.FileMode(0400), info.Mode().Perm(), "File permissions don`t match expected 111")
+
+	// key := fmt.Sprintf("--reference=%s %s", tempFile, tempFile1)
+
+	cmd := exec.Command("chmod", "--reference", tempFile, tempFile1)
+
+	err = cmd.Run()
+
+	er := fmt.Sprintf("Error copying permissions from %s to %s", tempFile, tempFile1)
+
+	assert.NoError(t, err, er)
+
+	info, err = os.Stat(tempFile1)
+
+	assert.NoError(t, err, "Error getting file information")
+
+	assert.Equal(t, os.FileMode(0400), info.Mode().Perm(), "File permissions don`t match 0400")
 
 }
 
 //Протестировать что chmod a +/-/= право file, действительно происходит смена у всех
 
-//Протестировать такую штуку chmod o-r,a-w month.txt text.txt
+// Протестировать такую штуку chmod o-r,a-w month.txt text.txt, изменение прав сразу у несколькоких файлов
+func TestModifyPermForTwoFiles(t *testing.T) {
+	tempFile := "modifyPermForTwoFiles1.txt"
+	tempFile1 := "modifyPermForTwoFiles2.txt"
+
+	defer os.RemoveAll(tempFile)
+	defer os.RemoveAll(tempFile1)
+
+	//дписать завтра
+
+}
