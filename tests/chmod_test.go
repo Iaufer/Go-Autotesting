@@ -19,6 +19,7 @@ func createTempFile(t *testing.T, fileName string) {
 	file.Close()
 }
 
+// Функция изменения прав доступа к файлу
 func runChmodCmd(perm, fileName string) error {
 	cmd := exec.Command("chmod", perm, fileName)
 	err := cmd.Run()
@@ -26,6 +27,7 @@ func runChmodCmd(perm, fileName string) error {
 	return err
 }
 
+// Функция генерации вложенных папок и файлов
 func generateDirectoriesAndFiles(baseDir string) {
 	for i := range 3 {
 		tempDir := filepath.Join(baseDir, fmt.Sprintf("tempDir%d", i))
@@ -71,7 +73,16 @@ func generateDirectoriesAndFiles(baseDir string) {
 	}
 }
 
-// Проверка создания файла
+/*
+Тест-кейс 1:
+Проверка создания файла
+Проверяет, что файл создается
+
+1. Создается временный файл testFile1.txt
+2. Проверяется, что файл действительно создан
+
+Ожидается, что файл будет успешно создан
+*/
 func TestCreateFile(t *testing.T) {
 	tempFile := "testFile1.txt"
 	defer os.Remove(tempFile)
@@ -83,7 +94,17 @@ func TestCreateFile(t *testing.T) {
 	assert.NoError(t, err, "File not found after creation")
 }
 
-// Проверка изменения прав доступа файла
+/*
+Тест-кейс 2:
+Проверка изменения прав доступа к файлу
+Проверяет, что права доступа изменяется при помощи chmod
+
+1. Создается временный файл
+2. Изменяются права доступа на 0755
+3. Проверяется, чтоу файла права доступа равны 0755
+
+Ожидается, что права доступа к файлу изменятся на 0755
+*/
 func TestChangeFilePerm(t *testing.T) {
 	tempFile := "testFile2.txt"
 	defer os.Remove(tempFile)
@@ -100,7 +121,17 @@ func TestChangeFilePerm(t *testing.T) {
 	assert.Equal(t, os.FileMode(0755), info.Mode().Perm(), "File permissions don`t match 0755")
 }
 
-// проверка на изменение прав директории
+/*
+Тест-кейс 3
+Проверка изменения прав доступа для директории
+Проверяет, что права доступа к директории изменятся
+
+1. Создается директория с именем testDir
+2. Изменяются права доступа на 0700
+3. Проверяются, что права доступа к директории изменились на 0700
+
+Ожидается, что права доступа директории будут изменены на 0700
+*/
 func TestChangeDirPerm(t *testing.T) {
 	tempDir := "testDir"
 	defer os.RemoveAll(tempDir)
@@ -122,7 +153,17 @@ func TestChangeDirPerm(t *testing.T) {
 
 }
 
-// // проверка на неправильное использование
+/*
+Тест-кейс 4
+Проверка ошибки при установке неправильных прав доступа
+Проверяется, что если установать некорректные права то будет ошибка
+
+1. Создается временый файл testFile.txt
+2. Устанавливаются некорректные права доступа 0997
+3. Ожидается ошибка при выполнении команды
+
+Ожидается, что возникнет ошибка
+*/
 func TestSetWrongPerm(t *testing.T) {
 	tempFile := "testFile.txt"
 	defer os.Remove(tempFile)
@@ -141,13 +182,30 @@ func TestSetWrongPerm(t *testing.T) {
 	assert.Error(t, err, "Expected error when trying to set wrong permissions")
 }
 
-// Проверка на изменение прав для несуществуюшего файла
+/*
+Тест-кейс 5
+Проверка изменения прав для несуществующего файла
+
+1.Попытка изменить права доступа для nonexistFile.txt на 0755
+2.Ожидается ошибка
+
+Ожидается, что возникнет ошибка
+*/
 func TestChangeNonExistFilePerm(t *testing.T) {
 	err := runChmodCmd("755", "nonexistFile.txt")
 	assert.Error(t, err, "Error expected when changing permissions on a non-existent file")
 }
 
-// Рекурсивная проверка на то что права изменились
+/*
+Тест-кейс 6:
+Проверка рекурсивного изменения правдоступа для директории и всех ее поддиректорий и файлов
+
+1. Создается директория и внутри нее несколько файлов и поддиректорий
+2. Выполняется рекурсивное изменение прав доступа на 0700
+3. Проверяется, что права доступа были изменены для всех файлов и поддиректорий
+
+Ожидается, что права доступа будут изменены на 0700
+*/
 func TestChangePermRecurs(t *testing.T) {
 	baseDir := "folder"
 
@@ -174,7 +232,17 @@ func TestChangePermRecurs(t *testing.T) {
 	assert.NoError(t, err, "Error during filepath.Walk")
 }
 
-// Проверка на то, что смена прав у файла который является символьной ссылкой, меняет права файла на который ссылается ссылка
+/*
+Тест-кейс 7:
+Проверка на то, что смена прав у файла который является символьной ссылкой, меняет права файла на который ссылается ссылка
+
+1. Создается файл ChangeSymLinkPermFile.txt
+2. Создается символьная ссылка testSymLinlk.txt
+3. Выполняется изменение прав доступа у ссылки
+4. Проверяется, что права доступа были изменены на файла на который ссылается testSymLinlk.txt
+
+Ожидается, что изменятся права доступа у файла ChangeSymLinkPermFile.txt
+*/
 func TestChangeSymLinkPerm(t *testing.T) {
 	tempFile := "ChangeSymLinkPermFile.txt"
 	symLinkFile := "testSymLinlk.txt"
@@ -194,10 +262,19 @@ func TestChangeSymLinkPerm(t *testing.T) {
 	info, err := os.Stat(tempFile)
 	assert.NoError(t, err, "Error getting file information")
 
-	assert.Equal(t, os.FileMode(0777), info.Mode().Perm(), "Permissions don`t match 777")
+	assert.Equal(t, os.FileMode(0777), info.Mode().Perm(), "Permissions don`t match 0777")
 }
 
-// Протестировать возомжно назначениярава через u-x
+/*
+Тест-кейс 8:
+Проверка возможности назначения прав через u+x
+
+1. Создается файл
+2. Выполняется изменение прав доступа для пользователя u+x
+3. Проверка, что права доступа были изменены корректно
+
+Ожидается, что права доступа у файла будут равны 0764
+*/
 func TestChangePermWithSymAddXForUser(t *testing.T) {
 	tempFile := "changePermWithSymAddXForUser.txt"
 	defer os.Remove(tempFile)
@@ -212,10 +289,19 @@ func TestChangePermWithSymAddXForUser(t *testing.T) {
 
 	assert.NoError(t, err, "Error getting file information")
 
-	assert.Equal(t, os.FileMode(0764), info.Mode().Perm(), "File permissions don`t match expected 0744")
+	assert.Equal(t, os.FileMode(0764), info.Mode().Perm(), "File permissions don`t match expected 0764")
 }
 
-// Протестировать возомжно отобрать права через o+w
+/*
+Тест-кейс 9:
+Проверка возможности удаления прав через o-r
+
+1. Создается файл
+2. Выполняется изменение прав доступа для other o-r
+3. Проверка, что права доступа были изменены корректно
+
+Ожидается, что права доступа у файла будут равны 0660
+*/
 func TestChangePermWithSymAddRForOther(t *testing.T) {
 	tempFile := "ChangePermWithSymAddRForOther.txt"
 	defer os.Remove(tempFile)
@@ -229,13 +315,21 @@ func TestChangePermWithSymAddRForOther(t *testing.T) {
 	info, err := os.Stat(tempFile)
 
 	assert.NoError(t, err, "Error getting file information")
-	assert.Equal(t, os.FileMode(0660), info.Mode().Perm(), "File permissions don`t match expected 744")
+	assert.Equal(t, os.FileMode(0660), info.Mode().Perm(), "File permissions don`t match expected 0660")
 
 }
 
-// Протестировать это
-// chmod -v 755 t.txt
-// mode of 't.txt' changed from 0640 (rw-r-----) to 0755 (rwxr-xr-x)
+/*
+Тест-кейс 10:
+Проверка использования опции chmod -v
+
+1. Создается файл
+2. Выполняется командас клюом -v
+3. Изменяются права на u=r,g=rx,o=r
+4. Проверяется, что права изменились корректно
+
+Ожидается, что вывод команды chmod с ключом -v соотсветсвует ожидаемому и права файла были изменены на 0456
+*/
 func TestChmodVPerm(t *testing.T) {
 	tempFile := "ChmodVPermFile.txt"
 	defer os.Remove(tempFile)
@@ -259,13 +353,18 @@ func TestChmodVPerm(t *testing.T) {
 	info, err := os.Stat(tempFile)
 	assert.NoError(t, err, "Error getting file information")
 	assert.Equal(t, os.FileMode(0456), info.Mode().Perm(), "File permissions don`t match expected 0456")
-
-	// вывод у cmd будет  mode of 'ChmodVPermFile.txt' changed from 0644 (rw-r--r--) to 0456 (r--r-xrw-) и я хчоу убедиться что дейсвтительно такой вывод
-
 }
 
-// Протестировать это chmod go-r директория — удалить права на чтение для группы и остальных пользователей для каталога
-// удаление права у юзера и группы на чтенеие
+/*
+Тест-кейс 11:
+Удаление прав на чтение у группы и остальных пользователей
+
+1. Создается файл
+2. Удаляются права на чтение для группы и остальных пользователей
+3. Проверяется, что права файла изменились корректно
+
+Ожидается, что права файла будут 0224
+*/
 func TestChmodRemoveUserGroupR(t *testing.T) {
 	tempFile := "chmodRemoveUserGroupRFile.txt"
 	defer os.Remove(tempFile)
@@ -284,7 +383,16 @@ func TestChmodRemoveUserGroupR(t *testing.T) {
 
 }
 
-// Протестировать это chmod -R u+rwx,go-rwx каталог — добавит владельцу права на чтение, запись и выполнение, а группе и остальным пользователям уберет все права для всех файлов и каталогов в указанной директории и её подкаталогах.
+/*
+Тест-кейс 12:
+Рекурсивное изменение прав для владельца, группы и других
+
+1. Создается директория
+2. Создаются поддиректории и файлы
+3. Выполняется командаc сhmod -R go-wrx,go+w
+
+Ожидается, что прав для директорий будут 0722, а для файлов 0622
+*/
 func TestChmodAddandRemovePermUserGroupOther(t *testing.T) {
 	baseDir := "folder1"
 	err := os.Mkdir(baseDir, 0755)
@@ -304,9 +412,9 @@ func TestChmodAddandRemovePermUserGroupOther(t *testing.T) {
 		assert.NoError(t, err, "Error walking through path")
 
 		if info.IsDir() {
-			assert.Equal(t, os.FileMode(0722), info.Mode().Perm(), "Permissions do not match 0711 for path: "+path)
+			assert.Equal(t, os.FileMode(0722), info.Mode().Perm(), "Permissions do not match 0722 for path: "+path)
 		} else {
-			assert.Equal(t, os.FileMode(0622), info.Mode().Perm(), "Permissions do not match 0700 for path: "+path)
+			assert.Equal(t, os.FileMode(0622), info.Mode().Perm(), "Permissions do not match 0622 for path: "+path)
 		}
 
 		return nil
@@ -316,7 +424,16 @@ func TestChmodAddandRemovePermUserGroupOther(t *testing.T) {
 
 }
 
-// Протестировать Ключ —reference и его использование
+/*
+Тест-кейс 13:
+Проверка копирования прав доступа с одного файла на другой с помощью --reference
+
+1. Создается два файла
+2. Изменяются права доступа первого файла на 0400
+3. С помощью ключа --reference копируются права с первого файла
+
+Ожидается, что права второго файла и первого совпадут (0400)
+*/
 func TestChmodReferenceOpt(t *testing.T) {
 	tempFile := "sourceFile.txt"
 	tempFile1 := "assignPerm.txt"
@@ -353,7 +470,16 @@ func TestChmodReferenceOpt(t *testing.T) {
 
 }
 
-// Протестировать такую штуку chmod o-r,a-w month.txt text.txt, изменение прав сразу у несколькоких файлов
+/*
+Тест-кейс 14:
+Проверка изменения прав сразу у двух файлов
+
+1. Создается два файла
+2. Изменяются права доступа для обоих файлов (chmod u+x,g-wx,o+x)
+3. Проверяется, что права были изменены корректно
+
+Ожидается, что права у обоих файлов будут 0745
+*/
 func TestModifyPermForTwoFiles(t *testing.T) {
 	tempFile := "modifyPermForTwoFiles1.txt"
 	tempFile1 := "modifyPermForTwoFiles2.txt"
