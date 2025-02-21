@@ -350,8 +350,6 @@ func TestChmodReferenceOpt(t *testing.T) {
 
 }
 
-//Протестировать что chmod a +/-/= право file, действительно происходит смена у всех
-
 // Протестировать такую штуку chmod o-r,a-w month.txt text.txt, изменение прав сразу у несколькоких файлов
 func TestModifyPermForTwoFiles(t *testing.T) {
 	tempFile := "modifyPermForTwoFiles1.txt"
@@ -360,6 +358,26 @@ func TestModifyPermForTwoFiles(t *testing.T) {
 	defer os.RemoveAll(tempFile)
 	defer os.RemoveAll(tempFile1)
 
-	//дписать завтра
+	createTempFile(t, tempFile)
+	createTempFile(t, tempFile1)
 
+	cmd := exec.Command("chmod", "u+x,g-wx,o+x", tempFile)
+
+	err := cmd.Run()
+
+	assert.NoError(t, err, "Error changing permissions for two files")
+
+	info, err := os.Stat(tempFile)
+
+	assert.NoError(t, err, "Error getting file information")
+
+	assert.Equal(t, os.FileMode(0745), info.Mode().Perm(), "File permissions don`t match expected 0745 for %s", tempFile)
+	//дописать завтра
+
+	info, err = os.Stat(tempFile)
+
+	assert.NoError(t, err, "Error getting file information")
+
+	assert.Equal(t, os.FileMode(0745), info.Mode().Perm(), "File permissions don`t match expected 0745 for %s", tempFile1)
+	//дописать завтра
 }
