@@ -17,8 +17,6 @@
 
 ## Установка и запуск тестов  
 
-### 🔹 1. Клонирование репозитория  
-
 ```sh
 git clone https://github.com/Iaufer/Go-Autotesting
 cd Go-Autotesting
