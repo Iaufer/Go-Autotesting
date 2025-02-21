@@ -132,7 +132,10 @@ func TestSetWrongPerm(t *testing.T) {
 	assert.NoError(t, err, "Error creating file")
 	file.Close()
 
-	cmd := exec.Command("chmod", "997", tempFile) // Заменить на функцию runChmodCmd()
+	err = runChmodCmd("997", tempFile)
+	assert.Error(t, err, "Error changing permissions")
+
+	cmd := exec.Command("chmod", "997", tempFile)
 
 	err = cmd.Run()
 	assert.Error(t, err, "Expected error when trying to set wrong permissions")
@@ -283,7 +286,6 @@ func TestChmodRemoveUserGroupR(t *testing.T) {
 
 // Протестировать это chmod -R u+rwx,go-rwx каталог — добавит владельцу права на чтение, запись и выполнение, а группе и остальным пользователям уберет все права для всех файлов и каталогов в указанной директории и её подкаталогах.
 func TestChmodAddandRemovePermUserGroupOther(t *testing.T) {
-	// t.Skip()
 	baseDir := "folder1"
 	err := os.Mkdir(baseDir, 0755)
 
@@ -316,8 +318,8 @@ func TestChmodAddandRemovePermUserGroupOther(t *testing.T) {
 
 // Протестировать Ключ —reference и его использование
 func TestChmodReferenceOpt(t *testing.T) {
-	tempFile := "sourceFile.txt"  //откуда
-	tempFile1 := "assignPerm.txt" //куда переделать на нормальные названия
+	tempFile := "sourceFile.txt"
+	tempFile1 := "assignPerm.txt"
 
 	defer os.Remove(tempFile)
 	defer os.Remove(tempFile1)
@@ -325,18 +327,15 @@ func TestChmodReferenceOpt(t *testing.T) {
 	createTempFile(t, tempFile)
 	createTempFile(t, tempFile1)
 
-	err := runChmodCmd("400", tempFile) // меняем права у файла от которого будем копировать права к другому файлу
+	err := runChmodCmd("400", tempFile)
 
 	assert.NoError(t, err, "Error change permissions")
 
-	//Проверяем что права успешно изменились
 	info, err := os.Stat(tempFile)
 
 	assert.NoError(t, err, "Error getting file information")
 
 	assert.Equal(t, os.FileMode(0400), info.Mode().Perm(), "File permissions don`t match expected 111")
-
-	// key := fmt.Sprintf("--reference=%s %s", tempFile, tempFile1)
 
 	cmd := exec.Command("chmod", "--reference", tempFile, tempFile1)
 
