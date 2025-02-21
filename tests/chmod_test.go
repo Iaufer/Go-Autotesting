@@ -34,7 +34,7 @@ func generateDirectoriesAndFiles(baseDir string) {
 			fmt.Println("Error creating directory:", err)
 			return
 		}
-		// defer os.RemoveAll(tempDir)
+		defer os.RemoveAll(tempDir)
 
 		numSubDirs := rand.Intn(6)
 		numFiles := rand.Intn(6)

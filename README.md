@@ -23,3 +23,4 @@ cd Go-Autotesting
 make или cd tests, go test -v
 
 
+
