@@ -21,6 +21,3 @@
 git clone https://github.com/Iaufer/Go-Autotesting
 cd Go-Autotesting
 make или cd tests, go test -v
-
-
-
