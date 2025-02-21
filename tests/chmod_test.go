@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -253,6 +254,10 @@ func TestChmodVPerm(t *testing.T) {
 
 	assert.Equal(t, expOutput, cmdOutput, "Output of the chmod doesn`t match what is expected")
 
+	info, err := os.Stat(tempFile)
+	assert.NoError(t, err, "Error getting file information")
+	assert.Equal(t, os.FileMode(0456), info.Mode().Perm(), "File permissions don`t match expected 0456")
+
 	// вывод у cmd будет  mode of 'ChmodVPermFile.txt' changed from 0644 (rw-r--r--) to 0456 (r--r-xrw-) и я хчоу убедиться что дейсвтительно такой вывод
 
 }
@@ -361,7 +366,7 @@ func TestModifyPermForTwoFiles(t *testing.T) {
 	createTempFile(t, tempFile)
 	createTempFile(t, tempFile1)
 
-	cmd := exec.Command("chmod", "u+x,g-wx,o+x", tempFile)
+	cmd := exec.Command("chmod", "u+x,g-wx,o+x", tempFile, tempFile1)
 
 	err := cmd.Run()
 
@@ -374,10 +379,63 @@ func TestModifyPermForTwoFiles(t *testing.T) {
 	assert.Equal(t, os.FileMode(0745), info.Mode().Perm(), "File permissions don`t match expected 0745 for %s", tempFile)
 	//дописать завтра
 
-	info, err = os.Stat(tempFile)
+	info, err = os.Stat(tempFile1)
 
 	assert.NoError(t, err, "Error getting file information")
 
 	assert.Equal(t, os.FileMode(0745), info.Mode().Perm(), "File permissions don`t match expected 0745 for %s", tempFile1)
 	//дописать завтра
+}
+
+// (3) Добавить тест на chmod a+x
+// Ты проверил u+x, o-r, но нет теста на a+x, который делает файл исполняемым для всех.
+// Почему полезно?
+// Покрывает важный chmod-сценарий, когда исполняемый бит ставится для всех.
+
+// (4) Проверить chmod на файлы без прав (0000)
+// Сейчас ты тестируешь chmod на обычных файлах, но что если файл вообще не имеет прав (0000)?
+// Пример:
+// очему это важно?
+
+// Файлы без прав (0000) могут заблокировать доступ, chmod должен уметь их менять.
+
+//Протестировать chmod u+s l.txt
+
+// Настройка Sticky Bit
+// Последний специальный бит разрешения – это Sticky Bit . В случае, если этот бит установлен для папки, то файлы в этой папке могут быть удалены только их владельцем. Пример использования этого бита в операционной системе это системная папка /tmp . Эта папка разрешена на запись любому пользователю, но удалять файлы в ней могут только пользователи, являющиеся владельцами этих файлов.
+
+// root@ruvds-hrc [~]#  ls -ld /tmp
+// drwxrwxrwt 8 root root 4096 Mar 25 10:22 /tmp
+// Символ «t» указывает, что на папку установлен Sticky Bit.
+func TestChmodStickyBit(t *testing.T) {
+	tempDir := "chmodStickyBitDir"
+
+	err := os.Mkdir(tempDir, 0755)
+	assert.NoError(t, err, "Error creating directory")
+
+	// defer os.RemoveAll(tempDir)
+
+	err = runChmodCmd("+t", tempDir)
+
+	assert.NoError(t, err, "Error change permissions")
+
+	info, err := os.Stat(tempDir)
+
+	assert.NoError(t, err, "Error getting dir information")
+
+	fmt.Printf("PERM: %o", info.Mode().Perm())
+
+	if os.ModeSticky != 0 {
+		fmt.Println(os.ModeSticky, reflect.TypeOf(os.ModeSticky))
+		fmt.Println("Sticky bit is set")
+	} else {
+		fmt.Println("Sticky bit is not set")
+	}
+
+	//доделать, что то не рабоатет
+
+	// assert.Equal(t, os.ModeSticky)
+
+	// assert.Equal(t, os.FileMode(01755), info.Mode().Perm(), "Permissions don`t match expected 01755")
+
 }
